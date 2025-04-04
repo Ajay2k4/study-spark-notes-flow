@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -229,9 +228,11 @@ const Podcast = () => {
                         <Select 
                           value={playbackSpeed} 
                           onValueChange={setPlaybackSpeed}
-                          onOpenChange={(e) => e.stopPropagation()}
                         >
-                          <SelectTrigger className="h-8 w-[70px]" onClick={(e) => e.stopPropagation()}>
+                          <SelectTrigger 
+                            className="h-8 w-[70px]" 
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <SelectValue placeholder="Speed" />
                           </SelectTrigger>
                           <SelectContent>

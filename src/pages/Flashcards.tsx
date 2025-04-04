@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -7,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Card as CardIcon, CircleCheck, X, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
+import { CreditCard, CircleCheck, X, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
 
 interface Flashcard {
   id: string;
@@ -243,7 +242,7 @@ const Flashcards = () => {
                           className="border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer"
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <CardIcon className="h-4 w-4 text-spark-600" />
+                            <CreditCard className="h-4 w-4 text-spark-600" />
                             <ImagePlus className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <p className="font-medium text-sm line-clamp-2">{card.question}</p>
@@ -253,7 +252,7 @@ const Flashcards = () => {
                   </div>
                 ) : (
                   <div className="border border-dashed rounded-md p-8 flex flex-col items-center justify-center min-h-[200px] text-muted-foreground">
-                    <CardIcon className="h-12 w-12 mb-4 opacity-50" />
+                    <CreditCard className="h-12 w-12 mb-4 opacity-50" />
                     <p>No flashcards generated yet</p>
                     <p className="text-sm">Enter your notes and click generate</p>
                   </div>

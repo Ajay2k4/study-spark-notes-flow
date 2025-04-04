@@ -1,11 +1,10 @@
-
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { BookOpen, HelpCircle, Card as CardIcon, Headphones } from 'lucide-react';
+import { BookOpen, HelpCircle, CreditCard, Headphones } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -32,7 +31,7 @@ const Dashboard = () => {
       id: 'flashcards',
       title: 'Flashcards Creator',
       description: 'Convert key concepts into visual flashcards for better retention',
-      icon: CardIcon,
+      icon: CreditCard,
       color: 'bg-green-100 text-green-600',
       path: '/flashcards',
     },

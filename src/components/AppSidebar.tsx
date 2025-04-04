@@ -1,6 +1,5 @@
-
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, HelpCircle, Card, Headphones, Home, LogOut } from 'lucide-react';
+import { BookOpen, HelpCircle, CreditCard, Headphones, Home, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Sidebar,
@@ -38,7 +37,7 @@ export function AppSidebar() {
     {
       title: 'Flashcards',
       url: '/flashcards',
-      icon: Card,
+      icon: CreditCard,
     },
     {
       title: 'Podcast',
