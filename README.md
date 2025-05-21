@@ -1,73 +1,86 @@
-# Welcome to your Lovable project
 
-## Project info
+# StudySpark - AI-powered Study Assistant
 
-**URL**: https://lovable.dev/projects/5aa37713-578a-4198-a583-4b8c45aa57f8
+StudySpark is an integrated learning platform that utilizes AI to help students generate notes, clarify doubts, create flashcards, and convert study material into audio podcasts.
 
-## How can I edit this code?
+## Project Structure
 
-There are several ways of editing your application.
+This project consists of two main parts:
+- **Frontend**: React application with TypeScript
+- **Backend**: Python FastAPI application
 
-**Use Lovable**
+## Setup Instructions
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5aa37713-578a-4198-a583-4b8c45aa57f8) and start prompting.
+### Frontend Setup
 
-Changes made via Lovable will be committed automatically to this repo.
+1. Install dependencies:
+```bash
+npm install
+```
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+2. Start the development server:
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Backend Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
 
-**Use GitHub Codespaces**
+2. Create a virtual environment:
+```bash
+python -m venv venv
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+3. Activate the virtual environment:
+- On Windows:
+  ```bash
+  venv\Scripts\activate
+  ```
+- On macOS/Linux:
+  ```bash
+  source venv/bin/activate
+  ```
 
-## What technologies are used for this project?
+4. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-This project is built with:
+5. Create a `.env` file based on `.env.example`:
+```bash
+cp .env.example .env
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+6. Edit the `.env` file and add your API keys and configuration values
 
-## How can I deploy this project?
+7. Start the FastAPI server:
+```bash
+python run.py
+```
 
-Simply open [Lovable](https://lovable.dev/projects/5aa37713-578a-4198-a583-4b8c45aa57f8) and click on Share -> Publish.
+## Features
 
-## Can I connect a custom domain to my Lovable project?
+- **Note Taking**: Generate structured notes from PDFs, YouTube videos, or manual input
+- **Doubt Clarification**: AI-powered question answering for study topics
+- **Flashcards**: Create and review flashcards with spaced repetition
+- **Podcast Generation**: Convert study material into audio podcasts for on-the-go learning
 
-Yes it is!
+## API Endpoints
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+The backend provides the following API endpoints:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- **Authentication**: `/api/auth/...`
+- **Notes**: `/api/notes/...`
+- **Doubts**: `/api/doubts/...`
+- **Flashcards**: `/api/flashcards/...`
+- **Podcasts**: `/api/podcasts/...`
+
+## Technologies Used
+
+- **Frontend**: React, TypeScript, Tailwind CSS, Shadcn UI
+- **Backend**: Python, FastAPI, MongoDB
+- **AI Services**: OpenAI, Hugging Face, AWS S3

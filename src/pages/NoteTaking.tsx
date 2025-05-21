@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, ChangeEvent } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -18,102 +18,67 @@ import {
 } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Upload, FileText, Youtube, DownloadCloud, Copy, Pencil, Check, X } from 'lucide-react';
+import { notesService } from '@/services/notesService';
 
 const NoteTaking = () => {
   const [inputType, setInputType] = useState<'pdf' | 'youtube'>('pdf');
-  const [inputValue, setInputValue] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [generatedNotes, setGeneratedNotes] = useState('');
+  const [noteTitle, setNoteTitle] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editableNotes, setEditableNotes] = useState('');
+  const [noteStyle, setNoteStyle] = useState('comprehensive');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue) {
-      toast.error('Please enter a valid input');
+    
+    if (inputType === 'pdf' && !selectedFile) {
+      toast.error('Please select a PDF file');
+      return;
+    }
+    
+    if (inputType === 'youtube' && !youtubeUrl) {
+      toast.error('Please enter a YouTube URL');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Simulate API call for note generation
-      setTimeout(() => {
-        let notes;
-        if (inputType === 'pdf') {
-          notes = `# Study Notes: Advanced Physics Concepts
-
-## Chapter 1: Quantum Mechanics Fundamentals
-
-### Key Concepts:
-- **Wave-Particle Duality**: Light and matter exhibit properties of both waves and particles
-- **Heisenberg Uncertainty Principle**: Cannot simultaneously know position and momentum with precision
-- **Schrödinger Equation**: Describes how quantum state changes over time
-
-### Important Formulas:
-- E = hf (Energy of a photon)
-- ΔxΔp ≥ ħ/2 (Uncertainty principle)
-- λ = h/p (de Broglie wavelength)
-
-## Chapter 2: Quantum States
-
-### Wave Functions:
-- Represent probability amplitudes
-- Must be normalized
-- Collapse upon measurement
-
-### Applications:
-1. Quantum computing
-2. Quantum cryptography
-3. Quantum sensors
-
----
-
-*These notes were generated based on your PDF upload. To continue learning, try creating flashcards or asking specific questions about these concepts.*`;
-        } else {
-          notes = `# Video Notes: Introduction to Machine Learning
-
-## 1. What is Machine Learning?
-- **Definition**: Field of study that gives computers the ability to learn without being explicitly programmed
-- **Types**:
-  - Supervised Learning
-  - Unsupervised Learning
-  - Reinforcement Learning
-
-## 2. Supervised Learning
-- Uses labeled data
-- **Examples**:
-  - Classification (email spam detection)
-  - Regression (house price prediction)
-- **Popular Algorithms**:
-  - Linear Regression
-  - Decision Trees
-  - Neural Networks
-
-## 3. Unsupervised Learning
-- Works with unlabeled data
-- Finds patterns and structure
-- **Applications**:
-  - Clustering
-  - Dimensionality reduction
-  - Anomaly detection
-
-## 4. Key Concepts
-- **Training vs Testing**: Split data to evaluate model performance
-- **Overfitting**: Model learns noise in training data
-- **Feature Engineering**: Creating meaningful inputs for models
-
----
-
-*Notes generated from YouTube video. Use the Doubt Assistant to ask questions about these topics!*`;
+      let generatedNote;
+      
+      if (inputType === 'pdf' && selectedFile) {
+        generatedNote = await notesService.createNoteFromPDF(selectedFile, {
+          title: noteTitle || undefined,
+          tags: [noteStyle], // Using the style as a tag
+        });
+      } else if (inputType === 'youtube') {
+        generatedNote = await notesService.createNoteFromYoutube({
+          youtube_url: youtubeUrl,
+          title: noteTitle || undefined,
+          tags: [noteStyle], // Using the style as a tag
+        });
+      }
+      
+      if (generatedNote) {
+        setGeneratedNotes(generatedNote.content);
+        setEditableNotes(generatedNote.content);
+        if (!noteTitle && generatedNote.title) {
+          setNoteTitle(generatedNote.title);
         }
-        
-        setGeneratedNotes(notes);
-        setEditableNotes(notes);
-        setIsLoading(false);
-        toast.success('Notes generated successfully!');
-      }, 2000);
+      }
     } catch (error) {
-      toast.error('Failed to generate notes');
+      console.error('Error generating notes:', error);
+      // Error is already handled by the service with toast
+    } finally {
       setIsLoading(false);
     }
   };
@@ -127,7 +92,7 @@ const NoteTaking = () => {
     const element = document.createElement('a');
     const file = new Blob([generatedNotes], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = 'study_notes.md';
+    element.download = `${noteTitle || 'study_notes'}.md`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -168,6 +133,16 @@ const NoteTaking = () => {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="noteTitle">Note Title (Optional)</Label>
+                  <Input 
+                    id="noteTitle" 
+                    placeholder="Enter a title for your notes" 
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                  />
+                </div>
+                
                 <Tabs defaultValue="pdf" className="w-full" onValueChange={(value) => setInputType(value as 'pdf' | 'youtube')}>
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="pdf" className="flex items-center gap-2">
@@ -189,16 +164,17 @@ const NoteTaking = () => {
                         type="file" 
                         className="hidden" 
                         id="pdfUpload" 
+                        ref={fileInputRef}
                         accept=".pdf"
-                        onChange={(e) => setInputValue(e.target.files?.[0]?.name || '')}
+                        onChange={handleFileChange}
                       />
                       <Label htmlFor="pdfUpload" className="cursor-pointer">
-                        <Button type="button" variant="outline">
+                        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
                           Select PDF File
                         </Button>
                       </Label>
-                      {inputValue && (
-                        <p className="mt-2 text-sm">Selected: {inputValue}</p>
+                      {selectedFile && (
+                        <p className="mt-2 text-sm">Selected: {selectedFile.name}</p>
                       )}
                     </div>
                   </TabsContent>
@@ -208,8 +184,8 @@ const NoteTaking = () => {
                       <Input 
                         id="youtubeUrl" 
                         placeholder="https://www.youtube.com/watch?v=..." 
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
+                        value={youtubeUrl}
+                        onChange={(e) => setYoutubeUrl(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
                         Enter a valid YouTube video URL to generate notes
@@ -220,7 +196,12 @@ const NoteTaking = () => {
 
                 <div className="space-y-2">
                   <Label>Note Style</Label>
-                  <RadioGroup defaultValue="comprehensive" className="flex space-x-2">
+                  <RadioGroup 
+                    defaultValue="comprehensive" 
+                    value={noteStyle}
+                    onValueChange={setNoteStyle}
+                    className="flex space-x-2"
+                  >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="comprehensive" id="comprehensive" />
                       <Label htmlFor="comprehensive">Comprehensive</Label>
@@ -240,7 +221,7 @@ const NoteTaking = () => {
             <CardFooter>
               <Button 
                 onClick={handleSubmit} 
-                disabled={!inputValue || isLoading} 
+                disabled={(inputType === 'pdf' && !selectedFile) || (inputType === 'youtube' && !youtubeUrl) || isLoading} 
                 className="w-full bg-spark-600 hover:bg-spark-700"
               >
                 {isLoading ? 'Generating...' : 'Generate Notes'}

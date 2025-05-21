@@ -1,11 +1,18 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import api from '../services/api';
 
 interface User {
   id: string;
   email: string;
   name: string;
+}
+
+interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
 }
 
 interface AuthContextType {
@@ -34,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if user is stored in localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      setUser(JSON.parse(storedUser).user);
     }
     setIsLoading(false);
   }, []);
@@ -42,23 +49,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      // In a real app, this would be an API call
-      // For demonstration, we'll simulate a successful login
-      if (email && password) {
-        // Mock user
-        const mockUser = {
-          id: '1',
-          email,
-          name: email.split('@')[0],
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast.success('Logged in successfully');
-      } else {
-        throw new Error('Invalid credentials');
-      }
+      const response = await api.post<AuthResponse>('/auth/login', {
+        username: email, // FastAPI OAuth2 form requires "username" field
+        password,
+      }, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+      
+      const data = response.data;
+      setUser(data.user);
+      localStorage.setItem('user', JSON.stringify(data));
+      toast.success('Logged in successfully');
     } catch (error) {
-      toast.error('Login failed');
+      console.error('Login error:', error);
+      toast.error('Login failed. Please check your credentials.');
       throw error;
     } finally {
       setIsLoading(false);
@@ -68,23 +74,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      // In a real app, this would be an API call
-      // For demonstration, we'll simulate a successful registration
-      if (name && email && password) {
-        // Mock user
-        const mockUser = {
-          id: '1',
-          email,
-          name,
-        };
-        setUser(mockUser);
-        localStorage.setItem('user', JSON.stringify(mockUser));
-        toast.success('Registered successfully');
-      } else {
-        throw new Error('Invalid registration data');
-      }
+      const response = await api.post<AuthResponse>('/auth/register', {
+        name,
+        email,
+        password,
+      });
+      
+      const data = response.data;
+      setUser(data.user);
+      localStorage.setItem('user', JSON.stringify(data));
+      toast.success('Registered successfully');
     } catch (error) {
-      toast.error('Registration failed');
+      console.error('Registration error:', error);
+      toast.error('Registration failed. Please try again.');
       throw error;
     } finally {
       setIsLoading(false);
@@ -92,6 +94,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    api.post('/auth/logout').catch(error => {
+      console.error('Logout error:', error);
+    });
     setUser(null);
     localStorage.removeItem('user');
     toast.success('Logged out successfully');
