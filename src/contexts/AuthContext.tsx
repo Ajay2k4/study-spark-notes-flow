@@ -21,6 +21,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  quickLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -93,6 +94,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const quickLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Create demo user data
+      const demoUser = {
+        access_token: "demo_token_12345",
+        token_type: "bearer",
+        user: {
+          id: "demo123",
+          name: "Demo User",
+          email: "demo@example.com"
+        }
+      };
+      
+      // Set user in state and localStorage
+      setUser(demoUser.user);
+      localStorage.setItem('user', JSON.stringify(demoUser));
+      toast.success('Quick access successful');
+    } catch (error) {
+      console.error('Quick login error:', error);
+      toast.error('Quick access failed. Please try regular login.');
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     api.post('/auth/logout').catch(error => {
       console.error('Logout error:', error);
@@ -108,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     register,
     logout,
+    quickLogin,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
