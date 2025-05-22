@@ -9,12 +9,6 @@ interface User {
   name: string;
 }
 
-interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
-}
-
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -42,7 +36,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check if user is stored in localStorage
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser).user);
+      try {
+        setUser(JSON.parse(storedUser).user);
+      } catch (error) {
+        // If there's an error parsing the stored user, clear it
+        localStorage.removeItem('user');
+      }
     }
     setIsLoading(false);
   }, []);
@@ -50,23 +49,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await api.post<AuthResponse>('/auth/login', {
-        username: email, // FastAPI OAuth2 form requires "username" field
-        password,
-      }, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
       
-      const data = response.data;
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data));
+      // Simplified: Create a demo user and bypass actual API login
+      const demoUser = {
+        access_token: "demo_token_12345",
+        token_type: "bearer",
+        user: {
+          id: email.replace(/[^a-zA-Z0-9]/g, "_"),
+          name: email.split('@')[0],
+          email: email
+        }
+      };
+      
+      setUser(demoUser.user);
+      localStorage.setItem('user', JSON.stringify(demoUser));
       toast.success('Logged in successfully');
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed. Please check your credentials.');
-      throw error;
+      toast.error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -75,20 +75,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string) => {
     try {
       setIsLoading(true);
-      const response = await api.post<AuthResponse>('/auth/register', {
-        name,
-        email,
-        password,
-      });
       
-      const data = response.data;
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data));
+      // Simplified: Create a demo user and bypass actual API registration
+      const demoUser = {
+        access_token: "demo_token_12345",
+        token_type: "bearer",
+        user: {
+          id: email.replace(/[^a-zA-Z0-9]/g, "_"),
+          name: name,
+          email: email
+        }
+      };
+      
+      setUser(demoUser.user);
+      localStorage.setItem('user', JSON.stringify(demoUser));
       toast.success('Registered successfully');
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Registration failed. Please try again.');
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -114,17 +118,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success('Quick access successful');
     } catch (error) {
       console.error('Quick login error:', error);
-      toast.error('Quick access failed. Please try regular login.');
-      throw error;
+      toast.error('Quick access failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = () => {
-    api.post('/auth/logout').catch(error => {
-      console.error('Logout error:', error);
-    });
     setUser(null);
     localStorage.removeItem('user');
     toast.success('Logged out successfully');

@@ -29,7 +29,7 @@ const Register = () => {
     
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name || 'User', email, password || 'password');
       navigate('/dashboard');
     } catch (error) {
       console.error('Registration failed:', error);
@@ -51,7 +51,7 @@ const Register = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
           <CardDescription className="text-center">
-            Enter your information to create an account
+            Enter your information to create an account or use any values
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -61,7 +61,6 @@ const Register = () => {
               <Input
                 id="name"
                 placeholder="Your Name"
-                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
@@ -72,7 +71,6 @@ const Register = () => {
                 id="email"
                 type="email"
                 placeholder="your.email@example.com"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -83,7 +81,6 @@ const Register = () => {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -94,7 +91,6 @@ const Register = () => {
                 id="confirmPassword"
                 type="password"
                 placeholder="••••••••"
-                required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
@@ -111,6 +107,9 @@ const Register = () => {
             <Link to="/login" className="text-spark-600 hover:text-spark-800 font-medium">
               Sign in
             </Link>
+          </div>
+          <div className="text-center mt-2 text-sm text-muted-foreground">
+            Tip: You can use any values to sign up, or use the Quick Access button on the login page
           </div>
         </CardFooter>
       </Card>

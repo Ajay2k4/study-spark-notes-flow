@@ -14,15 +14,19 @@ api.interceptors.request.use(
   (config) => {
     const user = localStorage.getItem('user');
     if (user) {
-      const { access_token } = JSON.parse(user);
-      if (access_token) {
-        // For demo token, don't actually send the token to backend
-        if (access_token !== "demo_token_12345") {
-          config.headers.Authorization = `Bearer ${access_token}`;
-        } else {
-          // For demo mode, we'll mock successful responses
-          console.log("Demo mode active - token not sent to backend");
+      try {
+        const { access_token } = JSON.parse(user);
+        if (access_token) {
+          // For demo token, don't actually send the token to backend
+          if (access_token !== "demo_token_12345") {
+            config.headers.Authorization = `Bearer ${access_token}`;
+          } else {
+            // For demo mode, we'll mock successful responses
+            console.log("Demo mode active - token not sent to backend");
+          }
         }
+      } catch (error) {
+        console.error("Error parsing user from localStorage:", error);
       }
     }
     return config;
@@ -41,24 +45,28 @@ api.interceptors.response.use(
     // Check if we're in demo mode
     const user = localStorage.getItem('user');
     if (user) {
-      const { access_token } = JSON.parse(user);
-      if (access_token === "demo_token_12345") {
-        console.log("Demo mode - bypassing API error");
-        // For demo mode, we'll return mock successful responses
-        return Promise.resolve({ 
-          data: { success: true, message: "Demo mode response" },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: error.config,
-        });
+      try {
+        const { access_token } = JSON.parse(user);
+        if (access_token === "demo_token_12345") {
+          console.log("Demo mode - bypassing API error");
+          // For demo mode, we'll return mock successful responses
+          return Promise.resolve({ 
+            data: { success: true, message: "Demo mode response" },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: error.config,
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing user from localStorage:", error);
       }
     }
     
     if (error.response && error.response.status === 401) {
-      // Handle 401 errors (unauthorized)
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Handle 401 errors (unauthorized) - but don't redirect in demo mode
+      console.error("Unauthorized access attempt");
+      // We won't automatically log out or redirect the user
     }
     return Promise.reject(error);
   }

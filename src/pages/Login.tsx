@@ -19,7 +19,8 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password);
+      // Any email/password combination will work now
+      await login(email, password || 'password');
       navigate('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);
@@ -53,7 +54,7 @@ const Login = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to sign in to your account
+            Enter any credentials to sign in to your account
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -63,7 +64,7 @@ const Login = () => {
             disabled={loading}
           >
             <LogIn className="h-4 w-4" />
-            {loading ? 'Signing in...' : 'Quick Access'}
+            {loading ? 'Signing in...' : 'Quick Access (Recommended)'}
           </Button>
           
           <div className="relative my-4">
@@ -82,7 +83,6 @@ const Login = () => {
                 id="email"
                 type="email"
                 placeholder="your.email@example.com"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -98,7 +98,6 @@ const Login = () => {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
