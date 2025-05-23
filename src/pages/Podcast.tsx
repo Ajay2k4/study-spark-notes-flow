@@ -1,8 +1,10 @@
-import { useState } from 'react';
+
+import { useState, useRef, useEffect } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,19 +19,108 @@ import {
   Volume2,
   Download,
   Check,
-  Clock
+  Clock,
+  Save
 } from 'lucide-react';
+import { podcastService } from '@/services/podcastService';
+import { useQuery } from '@tanstack/react-query';
 
 const Podcast = () => {
   const [content, setContent] = useState('');
+  const [title, setTitle] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioGenerated, setAudioGenerated] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState([80]);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(180); // 3 minutes as a default duration
+  const [duration, setDuration] = useState(180); // Default duration (will be updated when audio loads)
   const [playbackSpeed, setPlaybackSpeed] = useState('1');
   const [playerExpanded, setPlayerExpanded] = useState(false);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState('');
+  const [selectedVoice, setSelectedVoice] = useState('default');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressTimerRef = useRef<number | null>(null);
+
+  // Fetch available voices
+  const { data: voices, isLoading: loadingVoices } = useQuery({
+    queryKey: ['voices'],
+    queryFn: podcastService.getVoices,
+  });
+
+  // Audio element for playback
+  useEffect(() => {
+    const audio = new Audio();
+    audioRef.current = audio;
+    
+    // Set up audio event listeners
+    audio.onloadedmetadata = () => {
+      setDuration(audio.duration);
+    };
+    
+    audio.onended = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
+    audio.onpause = () => {
+      if (progressTimerRef.current) {
+        window.clearInterval(progressTimerRef.current);
+        progressTimerRef.current = null;
+      }
+    };
+
+    return () => {
+      // Clean up
+      if (progressTimerRef.current) {
+        window.clearInterval(progressTimerRef.current);
+      }
+      audio.pause();
+      audio.src = '';
+    };
+  }, []);
+
+  // Effect for playback
+  useEffect(() => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.play();
+      
+      // Update progress
+      if (progressTimerRef.current) {
+        window.clearInterval(progressTimerRef.current);
+      }
+      progressTimerRef.current = window.setInterval(() => {
+        if (audioRef.current) {
+          setCurrentTime(audioRef.current.currentTime);
+        }
+      }, 1000);
+    } else {
+      audioRef.current.pause();
+    }
+  }, [isPlaying]);
+
+  // Effect for volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume[0] / 100;
+    }
+  }, [volume]);
+
+  // Effect for playback speed
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = parseFloat(playbackSpeed);
+    }
+  }, [playbackSpeed]);
+
+  // Effect for audio URL
+  useEffect(() => {
+    if (currentAudioUrl && audioRef.current) {
+      audioRef.current.src = currentAudioUrl;
+      audioRef.current.load();
+    }
+  }, [currentAudioUrl]);
 
   const handleGeneratePodcast = async () => {
     if (!content.trim()) {
@@ -37,27 +128,78 @@ const Podcast = () => {
       return;
     }
 
+    if (!title.trim()) {
+      toast.error('Please enter a title for your podcast');
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      // Simulate API call for audio generation
-      setTimeout(() => {
+      const response = await podcastService.createPodcast({
+        title,
+        content,
+        voice_id: selectedVoice,
+        tags: []
+      });
+      
+      if (response && response.audio_url) {
+        setCurrentAudioUrl(response.audio_url);
         setAudioGenerated(true);
-        setIsGenerating(false);
         toast.success('Audio podcast generated successfully!');
-      }, 3000);
+      }
     } catch (error) {
-      toast.error('Failed to generate podcast');
+      console.error('Error generating podcast:', error);
+      toast.error('Failed to generate podcast. Please try again.');
+    } finally {
       setIsGenerating(false);
     }
   };
 
-  const togglePlayPause = () => {
+  const togglePlayPause = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setIsPlaying(!isPlaying);
-    toast(isPlaying ? 'Paused' : 'Playing');
+  };
+
+  const handleRewind = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (audioRef.current) {
+      const newTime = Math.max(0, audioRef.current.currentTime - 10);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleForward = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (audioRef.current) {
+      const newTime = Math.min(audioRef.current.duration, audioRef.current.currentTime + 10);
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const handleSliderChange = (e: React.MouseEvent, value: number) => {
+    e.stopPropagation();
+    if (audioRef.current) {
+      const newTime = (value / 100) * audioRef.current.duration;
+      audioRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
   };
 
   const handleDownload = () => {
-    toast.success('Podcast downloaded!');
+    if (currentAudioUrl) {
+      // Create a hidden anchor element for downloading
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = currentAudioUrl;
+      a.download = `${title || 'podcast'}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      toast.success('Podcast downloaded!');
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -88,6 +230,15 @@ const Podcast = () => {
             <CardContent>
               <div className="space-y-4">
                 <div>
+                  <Label htmlFor="title">Podcast Title</Label>
+                  <Input
+                    id="title"
+                    placeholder="Enter a title for your podcast"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="mb-4"
+                  />
+
                   <Label htmlFor="content">Study Material</Label>
                   <Textarea
                     id="content"
@@ -99,30 +250,40 @@ const Podcast = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="voice">Voice Style</Label>
-                    <Select defaultValue="natural">
+                    <Label htmlFor="voice">Voice</Label>
+                    <Select 
+                      value={selectedVoice}
+                      onValueChange={setSelectedVoice}
+                      disabled={loadingVoices}
+                    >
                       <SelectTrigger id="voice">
                         <SelectValue placeholder="Select voice" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="natural">Natural</SelectItem>
-                        <SelectItem value="professional">Professional</SelectItem>
-                        <SelectItem value="friendly">Friendly</SelectItem>
-                        <SelectItem value="enthusiastic">Enthusiastic</SelectItem>
+                        {loadingVoices ? (
+                          <SelectItem value="loading">Loading voices...</SelectItem>
+                        ) : (
+                          voices?.map(voice => (
+                            <SelectItem key={voice.id} value={voice.id}>
+                              {voice.name} ({voice.gender})
+                            </SelectItem>
+                          )) || [
+                            <SelectItem key="default" value="default">Default</SelectItem>
+                          ]
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="accent">Accent</Label>
-                    <Select defaultValue="american">
-                      <SelectTrigger id="accent">
-                        <SelectValue placeholder="Select accent" />
+                    <Label htmlFor="format">Format</Label>
+                    <Select defaultValue="standard">
+                      <SelectTrigger id="format">
+                        <SelectValue placeholder="Select format" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="american">American</SelectItem>
-                        <SelectItem value="british">British</SelectItem>
-                        <SelectItem value="australian">Australian</SelectItem>
-                        <SelectItem value="indian">Indian</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="conversational">Conversational</SelectItem>
+                        <SelectItem value="instructional">Instructional</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -132,7 +293,7 @@ const Podcast = () => {
             <CardFooter>
               <Button 
                 onClick={handleGeneratePodcast} 
-                disabled={!content.trim() || isGenerating} 
+                disabled={!content.trim() || !title.trim() || isGenerating} 
                 className="w-full bg-spark-600 hover:bg-spark-700"
               >
                 {isGenerating ? 'Generating...' : 'Generate Podcast'}
@@ -148,7 +309,7 @@ const Podcast = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {audioGenerated ? (
+              {audioGenerated && currentAudioUrl ? (
                 <div className="space-y-6">
                   <div 
                     className={`border rounded-lg p-6 ${playerExpanded ? 'h-[300px]' : 'h-[180px]'} flex flex-col justify-between bg-gradient-to-br from-spark-50 to-ocean-50 transition-all duration-300`}
@@ -160,11 +321,11 @@ const Podcast = () => {
                           <div className="bg-spark-600 text-white p-2 rounded-full">
                             <Headphones className="h-4 w-4" />
                           </div>
-                          <h3 className="font-medium">Your Study Podcast</h3>
+                          <h3 className="font-medium">{title || 'Your Study Podcast'}</h3>
                         </div>
                         {playerExpanded && (
                           <p className="text-sm text-muted-foreground mt-2">
-                            Generated from your notes about quantum mechanics and machine learning concepts
+                            {content.length > 100 ? `${content.substring(0, 100)}...` : content}
                           </p>
                         )}
                       </div>
@@ -175,7 +336,15 @@ const Podcast = () => {
                     </div>
 
                     <div className="mt-4">
-                      <div className="relative w-full h-1 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="relative w-full h-2 bg-muted rounded-full overflow-hidden cursor-pointer"
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const x = e.clientX - rect.left;
+                          const percent = (x / rect.width) * 100;
+                          handleSliderChange(e, percent);
+                        }}
+                      >
                         <div 
                           className="absolute top-0 left-0 h-full bg-spark-600" 
                           style={{ width: `${(currentTime / duration) * 100}%` }}
@@ -189,15 +358,15 @@ const Podcast = () => {
 
                     <div className="flex justify-between items-center mt-4">
                       <div className="flex items-center space-x-4">
-                        <button className="text-muted-foreground hover:text-foreground transition-colors">
+                        <button 
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={handleRewind}
+                        >
                           <SkipBack className="h-5 w-5" />
                         </button>
                         <button 
                           className="bg-spark-600 text-white p-2 rounded-full hover:bg-spark-700 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            togglePlayPause();
-                          }}
+                          onClick={togglePlayPause}
                         >
                           {isPlaying ? (
                             <Pause className="h-5 w-5" />
@@ -205,7 +374,10 @@ const Podcast = () => {
                             <Play className="h-5 w-5" />
                           )}
                         </button>
-                        <button className="text-muted-foreground hover:text-foreground transition-colors">
+                        <button 
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={handleForward}
+                        >
                           <SkipForward className="h-5 w-5" />
                         </button>
                       </div>
@@ -253,15 +425,25 @@ const Podcast = () => {
                       <Check className="h-4 w-4 text-green-500" />
                       <span>Generated successfully</span>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex items-center gap-2"
-                      onClick={handleDownload}
-                    >
-                      <Download className="h-4 w-4" />
-                      Download MP3
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        onClick={handleDownload}
+                      >
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                      <Button 
+                        variant="default" 
+                        size="sm"
+                        className="flex items-center gap-2 bg-spark-600 hover:bg-spark-700"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : (
